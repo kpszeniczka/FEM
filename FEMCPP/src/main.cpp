@@ -115,6 +115,7 @@ std::vector<Element> elements = loadElements(filename);
 ElemUniv::ElemUniv(){
         calculatedNs();
         calculateSurface();
+        calculateN();
     };
 
 void ElemUniv::calculatedNs(){
@@ -139,6 +140,15 @@ void ElemUniv::calculateSurface(){
     }
 }
 
+void ElemUniv::calculateN() {
+    for (int i = 0; i < NPC * NPC; ++i) {
+        N.push_back({ 0.25 * (1 - ksi[i]) * (1 - eta[i]),
+                        0.25 * (1 + ksi[i]) * (1 - eta[i]),
+                        0.25 * (1 + ksi[i]) * (1 + eta[i]),
+                        0.25 * (1 - ksi[i]) * (1 + eta[i]) });
+    }
+}
+
 ElemUniv elemUniv;
 
 void Element::setup(){
@@ -149,6 +159,7 @@ void Element::setup(){
     calculateDetJBc();
     calculateHbc();
     calculateP();
+    calculateC();
 }
 
 //do liczenia macierzy H
@@ -302,13 +313,29 @@ void Element::calculateP() {
     }
 }
 
+void Element::calculateC() {
+    C.resize(4, Vector(4, 0.0));
+    for (int i = 0; i < NPC; i++) {
+        for (int j = 0; j < NPC; j++) {
+            for (int k = 0; k < 4; k++) {
+                for (int l = 0; l < 4; l++) {
+                    C[k][l] += (data.Density * data.SpecificHeat * detJ[i * NPC + j]
+                        * elemUniv.N[i * NPC + j][k] * elemUniv.N[i * NPC + j][l]
+                        * weights[i] * weights[j]);
+                }
+            }
+        }
+    }
+}
+
 void Solution::setup(){
     agregate();
 }
 
 void Solution::agregate() {
-    Hglobal.resize(data.NodesNumber,Vector(data.NodesNumber,0.0));
-    Pglobal.resize(data.NodesNumber,0.0);
+    Hglobal.resize(data.NodesNumber, Vector(data.NodesNumber, 0.0));
+    Pglobal.resize(data.NodesNumber, 0.0);
+    Cglobal.resize(data.NodesNumber, Vector(data.NodesNumber, 0.0));
 
     int globalJ, globalK;
 
@@ -320,6 +347,7 @@ void Solution::agregate() {
             for (int k = 0; k < 4; ++k) {
                 globalK = element.nodeIds[k] - 1;
                 Hglobal[globalJ][globalK] += element.H[j][k] + element.Hbc[j][k];
+                Cglobal[globalJ][globalK] += element.C[j][k];
             }
             Pglobal[globalJ] += element.P[j];
         }
@@ -341,7 +369,84 @@ void Solution::printP() {
         std::cout << std::setw(8) << std::setprecision(6) << Pglobal[i] << ", ";
     }
     std::cout << std::endl;
+    std::cout << std::endl;
 }
+
+void Solution::printC() {
+    for (int i = 0; i < data.NodesNumber; ++i) {
+        for (int j = 0; j < data.NodesNumber; ++j) {
+            std::cout << std::setw(8) << std::setprecision(6) << Cglobal[i][j] << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+std::vector<double> Solution::Gauss(const std::vector<std::vector<double>>& A, std::vector<double>& b) {
+    int n = A.size();
+    std::vector<std::vector<double>> augmentedMatrix = A;
+    for (int i = 0; i < n; ++i) {
+        augmentedMatrix[i].push_back(b[i]);
+    }
+    for (int i = 0; i < n; ++i) {
+        int maxRow = i;
+        for (int k = i + 1; k < n; ++k) {
+            if (std::abs(augmentedMatrix[k][i]) > std::abs(augmentedMatrix[maxRow][i])) {
+                maxRow = k;
+            }
+        }
+        std::swap(augmentedMatrix[i], augmentedMatrix[maxRow]);
+        double pivot = augmentedMatrix[i][i];
+        for (int j = i; j <= n; ++j) {
+            augmentedMatrix[i][j] /= pivot;
+        }
+        for (int k = i + 1; k < n; ++k) {
+            double factor = augmentedMatrix[k][i];
+            for (int j = i; j <= n; ++j) {
+                augmentedMatrix[k][j] -= factor * augmentedMatrix[i][j];
+            }
+        }
+    }
+    for (int i = n - 1; i >= 0; --i) {
+        b[i] = augmentedMatrix[i][n];
+        for (int j = i + 1; j < n; ++j) {
+            b[i] -= augmentedMatrix[i][j] * b[j];
+        }
+    }
+
+    return b;
+}
+
+void Solution::solve() {
+    Global.resize(data.NodesNumber, Vector(data.NodesNumber, 0.0));
+    for (int i = 0; i < data.NodesNumber; i++) {
+        for (int j = 0; j < data.NodesNumber; j++) {
+            Global[i][j] = Hglobal[i][j] + Cglobal[i][j] / data.SimulationStepTime;
+        }
+    }
+
+    Vector t0(data.NodesNumber, data.InitialTemp);
+    Vector t = t0;
+
+    for (double i = data.SimulationStepTime; i <= data.SimulationTime; i += data.SimulationStepTime) {
+        for (int row = 0; row < data.NodesNumber; row++) {
+            t[row] = 0;
+            for (int col = 0; col < data.NodesNumber; col++) {
+                t[row] += Cglobal[row][col] / data.SimulationStepTime * t0[col];
+            }
+            t[row] += Pglobal[row];
+        }
+
+        t = Gauss(Global, t);
+
+        std::cout << "Temperature at time " << i << "s:\n";
+        std::cout << "MIN: " << *std::min_element(t.begin(), t.end()) << " MAX: " << *std::max_element(t.begin(), t.end()) << std::endl;
+
+        t0 = t;
+    }
+
+}
+
 
 int main() {
 
@@ -349,7 +454,9 @@ int main() {
     sol.setup();
 #if PRINT != 0
     sol.printH();
+    sol.printC();
     sol.printP();
 #endif
+    sol.solve();
     return 0;
 }
