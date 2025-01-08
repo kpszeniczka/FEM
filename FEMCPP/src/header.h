@@ -1,16 +1,16 @@
 #pragma once
 
 #include <iostream>
-#include <vector>
 #include <cmath>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <vector>
 
 #define PRINT 1
 #define TEST 1
-#define NPC 3
+#define NPC 2
 #define NPCBC 3
 
 #if TEST == 1
@@ -23,78 +23,46 @@ std::string filename = "Test2_4_4_MixGrid.txt";
 std::string filename = "Test3_31_31_kwadrat.txt";
 #endif
 #if NPC == 2
-std::vector<double> ksi = { -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0) };
-std::vector<double> eta = { -1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0) };
-std::vector<double> weights{ 1.0, 1.0 };
+double value[NPC] = { -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0)};
+double weights[NPC] = { 1.0, 1.0 };
 #endif
 #if NPC == 3
-std::vector<double> ksi = { -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0),
-                           -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0),
-                           -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0) };
-std::vector<double> eta = { -std::sqrt(3.0 / 5.0), -std::sqrt(3.0 / 5.0), -std::sqrt(3.0 / 5.0),
-                           0.0, 0.0, 0.0,
-                           std::sqrt(3.0 / 5.0), std::sqrt(3.0 / 5.0), std::sqrt(3.0 / 5.0) };
-std::vector<double> weights = { 5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0 };
+double value[NPC] = { -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0)};
+double weights[NPC] = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
 #endif
 #if NPC == 4
-std::vector<double> ksi = { -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                           -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
+double value[NPC] = {-std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
+                   -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
+                   std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
+                   std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
 };
-std::vector<double> eta = { -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-                            std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
-};
-std::vector<double> weights = { (18.0 - std::sqrt(30.0)) / 36.0,
-                               (18.0 + std::sqrt(30.0)) / 36.0,
-                               (18.0 + std::sqrt(30.0)) / 36.0,
-                               (18.0 - std::sqrt(30.0)) / 36.0 };
+double weights[NPC] = {(18.0 - std::sqrt(30.0)) / 36.0,
+                       (18.0 + std::sqrt(30.0)) / 36.0,
+                       (18.0 + std::sqrt(30.0)) / 36.0,
+                       (18.0 - std::sqrt(30.0)) / 36.0};
 #endif
 
 #if NPCBC == 2
-std::vector<double> ksibc = { -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0), 1.0, 1.0, 1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0), -1.0, -1.0 };
-std::vector<double> etabc = { -1.0, -1.0, -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0), 1.0, 1.0, 1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0) };
-std::vector<double> weightsbc = { 1.0, 1.0 };
+double ksibc[NPCBC * 4] = { -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0),
+                               1.0, 1.0,
+                                1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0),
+                                -1.0, -1.0 };
+double etabc[NPCBC * 4] = { -1.0, -1.0, -1.0 / std::sqrt(3.0), 1.0 / std::sqrt(3.0), 1.0, 1.0, 1.0 / std::sqrt(3.0), -1.0 / std::sqrt(3.0) };
+double weightsbc[NPCBC] = {1.0, 1.0};
 #endif
 #if NPCBC == 3
-std::vector<double> ksibc = { -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0),
+double ksibc[NPCBC * 4] = { -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0),
                               1.0, 1.0, 1.0,
                               std::sqrt(3.0 / 5.0), 0.0, -std::sqrt(3.0 / 5.0),
                               -1.0, -1.0, -1.0 };
-std::vector<double> etabc = { -1.0, -1.0, -1.0,
+double etabc[NPCBC * 4] = { -1.0, -1.0, -1.0,
                               -std::sqrt(3.0 / 5.0), 0.0, std::sqrt(3.0 / 5.0),
                                1.0, 1.0, 1.0,
                                std::sqrt(3.0 / 5.0), 0.0, -std::sqrt(3.0 / 5.0) };
-std::vector<double> weightsbc = { 5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0 };
+double weightsbc[NPCBC] = { 5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0 };
 #endif
 #if NPCBC == 4
-std::vector<double> ksibc = {
+double ksibc[NPCBC * 4] = {
     -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
     -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
      std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
@@ -107,7 +75,7 @@ std::vector<double> ksibc = {
     -1.0, -1.0, -1.0, -1.0
 };
 
-std::vector<double> etabc = {
+double etabc[NPCBC * 4] = {
     -1.0, -1.0, -1.0, -1.0,
     -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
     -std::sqrt(3.0 / 7.0 - 2.0 / 7.0 * std::sqrt(6.0 / 5.0)),
@@ -120,7 +88,7 @@ std::vector<double> etabc = {
     -std::sqrt(3.0 / 7.0 + 2.0 / 7.0 * std::sqrt(6.0 / 5.0))
 };
 
-std::vector<double> weightsbc = {
+double weightsbc[NPCBC] = {
     (18.0 - std::sqrt(30.0)) / 36.0,
     (18.0 + std::sqrt(30.0)) / 36.0,
     (18.0 + std::sqrt(30.0)) / 36.0,
@@ -139,15 +107,15 @@ struct Node {
 };
 
 struct ElemUniv {
-    std::vector<std::vector<double>> dndksi;
-    std::vector<std::vector<double>> dndeta;
-    std::vector<std::vector<double>> dnBc;
-    std::vector<std::vector<double>> N;
+    double dndksi[NPC * NPC][4] = { 0 };
+    double dndeta[NPC * NPC][4] = { 0 };
+    double NBc[NPCBC * 4][4] = { 0 };
+    double N[NPC * NPC][4] = { 0 };
 
     ElemUniv();
     void calculatedNs();
 
-    void calculateSurface();
+    void calculateNBc();
 
     void calculateN();
 };
@@ -155,16 +123,15 @@ struct ElemUniv {
 
 struct Element {
     std::vector<int> nodeIds;
-    using Vector = std::vector<double>;
-    using Matrix = std::vector<std::vector<double>>;
-    Matrix H;
-    Matrix Hbc;
-    Vector P;
-    Matrix C;
-    std::vector<Matrix> J;
-    std::vector<Matrix> J1;
-    Vector detJ;
-    Vector detJBc;
+    double H[4][4] = { 0 };
+    double Hbc[4][4] = { 0 };
+    double P[4] = { 0 };
+    double C[4][4] = { 0 };
+    double J[NPC * NPC][2][2] = { 0 };
+    double J1[NPC * NPC][2][2] = { 0 };
+    double detJ[NPC * NPC] = { 0 };
+    double detJBc[4] = { 0 };
+
     void calculateJakobian();
     void calculateDetJ();
     void inverseJakobian();
@@ -201,3 +168,5 @@ struct Solution{
 std::vector<Node> loadNodes(const std::string& filename);
 GlobalData loadData(const std::string& filename);
 std::vector<Element> loadElements(const std::string& filename);
+void printMatrix();
+void printVector();

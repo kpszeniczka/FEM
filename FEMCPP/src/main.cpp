@@ -114,38 +114,44 @@ std::vector<Element> elements = loadElements(filename);
 
 ElemUniv::ElemUniv(){
         calculatedNs();
-        calculateSurface();
+        calculateNBc();
         calculateN();
     };
 
 void ElemUniv::calculatedNs(){
-        for (int i = 0; i < NPC * NPC; ++i) {
-            dndksi.push_back({-0.25 * (1 - eta[i]),
-                              0.25 * (1 - eta[i]),
-                              0.25 * (1 + eta[i]),
-                              -0.25 * (1 + eta[i])});
-            dndeta.push_back({-0.25 * (1 - ksi[i]),
-                              -0.25 * (1 + ksi[i]),
-                              0.25 * (1 + ksi[i]),
-                              0.25 * (1 - ksi[i])});
+        for (int i = 0; i < NPC; ++i) {
+            for(int j = 0; j < NPC; ++j){
+                dndksi[i * NPC + j][0] = -0.25 * (1 - value[i]);
+                dndksi[i * NPC + j][1] = 0.25 * (1 - value[i]);
+                dndksi[i * NPC + j][2] = 0.25 * (1 + value[i]);
+                dndksi[i * NPC + j][3] = -0.25 * (1 + value[i]);
+
+                dndeta[i * NPC + j][0] = -0.25 * (1 - value[j]);
+                dndeta[i * NPC + j][1] = -0.25 * (1 + value[j]);
+                dndeta[i * NPC + j][2] = 0.25 * (1 + value[j]);
+                dndeta[i * NPC + j][3] = 0.25 * (1 - value[j]);
+            }
         }
 
 }
-void ElemUniv::calculateSurface(){
-    for (int i = 0; i < NPCBC * 4; ++i) {
-    dnBc.push_back({0.25 * (1 - ksibc[i]) * (1 - etabc[i]),
-                    0.25 * (1 + ksibc[i]) * (1 - etabc[i]),
-                    0.25 * (1 + ksibc[i]) * (1 + etabc[i]),
-                    0.25 * (1 - ksibc[i]) * (1 + etabc[i])});
+
+void ElemUniv::calculateN() {
+    for (int i = 0; i < NPC; ++i) {
+        for(int j = 0; j < NPC; ++j){
+            N[i * NPC + j][0] = 0.25 * (1 - value[j]) * (1 - value[i]);
+            N[i * NPC + j][1] = 0.25 * (1 + value[j]) * (1 - value[i]);
+            N[i * NPC + j][2] = 0.25 * (1 + value[j]) * (1 + value[i]);
+            N[i * NPC + j][3] = 0.25 * (1 - value[j]) * (1 + value[i]);
+        }
     }
 }
 
-void ElemUniv::calculateN() {
-    for (int i = 0; i < NPC * NPC; ++i) {
-        N.push_back({ 0.25 * (1 - ksi[i]) * (1 - eta[i]),
-                        0.25 * (1 + ksi[i]) * (1 - eta[i]),
-                        0.25 * (1 + ksi[i]) * (1 + eta[i]),
-                        0.25 * (1 - ksi[i]) * (1 + eta[i]) });
+void ElemUniv::calculateNBc(){
+    for (int i = 0; i < NPCBC * 4; ++i) {
+        NBc[i][0] = 0.25 * (1 - ksibc[i]) * (1 - etabc[i]);
+        NBc[i][1] = 0.25 * (1 + ksibc[i]) * (1 - etabc[i]);
+        NBc[i][2] = 0.25 * (1 + ksibc[i]) * (1 + etabc[i]);
+        NBc[i][3] = 0.25 * (1 - ksibc[i]) * (1 + etabc[i]);
     }
 }
 
@@ -162,9 +168,7 @@ void Element::setup(){
     calculateC();
 }
 
-//do liczenia macierzy H
 void Element::calculateJakobian(){
-    J.resize(NPC * NPC, Matrix(2, Vector(2, 0.0)));
     for (int pc = 0; pc < NPC * NPC; ++pc) {
         for (int j = 0; j < 4; ++j) {
             J[pc][0][0] += elemUniv.dndksi[pc][j] * nodes[nodeIds[j] - 1].x;
@@ -176,11 +180,10 @@ void Element::calculateJakobian(){
 }
 void Element::calculateDetJ(){
     for (int pc = 0; pc < NPC * NPC; ++pc) {
-        detJ.push_back(J[pc][0][0] * J[pc][1][1] - J[pc][0][1] * J[pc][1][0]);
+        detJ[pc] = (J[pc][0][0] * J[pc][1][1] - J[pc][0][1] * J[pc][1][0]);
     }
 }
 void Element::inverseJakobian(){
-    J1 = J;
     for (int pc = 0; pc < NPC * NPC; ++pc) {
         J1[pc][0][1] = -J[pc][0][1] / detJ[pc];
         J1[pc][1][0] = -J[pc][1][0] / detJ[pc];
@@ -189,12 +192,8 @@ void Element::inverseJakobian(){
     }
 }
 void Element::calculateH() {
-    Matrix matrix_x(NPC * NPC, Vector(4, 0.0));
-    Matrix matrix_y(NPC * NPC, Vector(4, 0.0));
-    std::vector<Matrix> matrix_x_pc(NPC * NPC, Matrix(4, Vector(4, 0.0)));
-    std::vector<Matrix> matrix_y_pc(NPC * NPC, Matrix(4, Vector(4, 0.0)));
-    std::vector<Matrix> matrix_h_pc(NPC * NPC, Matrix(4, Vector(4, 0.0)));
-    H.resize(4, Vector(4, 0.0));
+    double matrix_x[NPC * NPC][4];
+    double matrix_y[NPC * NPC][4];
 
     for (int pc = 0; pc < NPC * NPC; ++pc) {
         for (int j = 0; j < 4; ++j) {
@@ -203,78 +202,52 @@ void Element::calculateH() {
         }
     }
 
-    for (int pc = 0; pc < NPC * NPC; ++pc) {
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j) {
-                matrix_x_pc[pc][i][j] = matrix_x[pc][i] * matrix_x[pc][j];
-                matrix_y_pc[pc][i][j] = matrix_y[pc][i] * matrix_y[pc][j];
-            }
-        }
-    }
-
-    for (int pc = 0; pc < NPC * NPC; ++pc) {
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j) {
-                matrix_h_pc[pc][i][j] = data.Conductivity * (matrix_x_pc[pc][i][j] + matrix_y_pc[pc][i][j]) * detJ[pc];
-            }
-        }
-    }
-
     for (int k = 0; k < NPC; ++k) {
         for (int l = 0; l < NPC; ++l) {
             for (int i = 0; i < 4; ++i) {
                 for (int j = 0; j < 4; ++j) {
-                   H[i][j] += matrix_h_pc[k * NPC + l][i][j] * weights[k] * weights[l];
+                    H[i][j] += data.Conductivity * detJ[k * NPC + l]
+                        * (matrix_x[k * NPC + l][i] * matrix_x[k * NPC + l][j]
+                        + matrix_y[k * NPC + l][i] * matrix_y[k * NPC + l][j])
+                       * weights[k] * weights[l];
                 }
             }
         }
     }
 }
 
-//do liczenia macierzy Hbc i wektora P
 void Element::calculateDetJBc(){
-    Vector L;
-    Vector x;
-    Vector y;
+    double L[4];
+    double x[4];
+    double y[4];
     double dx, dy;
     for (int i = 0; i < 4; ++i) {
-        x.push_back(nodes[nodeIds[i]-1].x);
-        y.push_back(nodes[nodeIds[i]-1].y);
+        x[i] = nodes[nodeIds[i] - 1].x;
+        y[i] = nodes[nodeIds[i] - 1].y;
     }
     for (int i = 0; i < 4; ++i) {
-        dx = nodes[nodeIds[i]-1].x - nodes[nodeIds[(i+1)%4] - 1].x;
-        dy = nodes[nodeIds[i]-1].y - nodes[nodeIds[(i+1)%4] - 1].y;
-        detJBc.push_back(sqrt(dx*dx + dy*dy)/2);
+        dx = nodes[nodeIds[i] - 1].x - nodes[nodeIds[(i + 1) % 4] - 1].x;
+        dy = nodes[nodeIds[i] - 1].y - nodes[nodeIds[(i + 1) % 4] - 1].y;
+        detJBc[i] = sqrt(dx * dx + dy * dy) / 2;
     }
 }
 
 void Element::calculateHbc() {
-    Matrix matrixHbcSum(4, Vector(16, 0.0));
+    double HbcEdge[4][4][4] = { 0 };
 
     for (int edge = 0; edge < 4; ++edge) {
         for (int point = 0; point < NPCBC; ++point) {
-            int index = edge * NPCBC + point;
-
-            for (int row = 0; row < 4; ++row) {
-                for (int col = 0; col < 4; ++col) {
-                    matrixHbcSum[edge][row * 4 + col] += elemUniv.dnBc[index][row] * elemUniv.dnBc[index][col] * weightsbc[point];
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    HbcEdge[edge][i][j] += elemUniv.NBc[edge * NPCBC + point][i] * elemUniv.NBc[edge * NPCBC + point][j] * weightsbc[point];
                 }
             }
         }
 
-        for (int k = 0; k < 16; ++k) {
-            matrixHbcSum[edge][k] *= data.Alfa * detJBc[edge];
-        }
-    }
-
-    Hbc.clear();
-    Hbc.resize(4, Vector(4, 0.0));
-
-    for (int edge = 0; edge < 4; ++edge) {
         if (nodes[nodeIds[edge] - 1].BC && nodes[nodeIds[(edge + 1) % 4] - 1].BC) {
-            for (int row = 0; row < 4; ++row) {
-                for (int col = 0; col < 4; ++col) {
-                    Hbc[row][col] += matrixHbcSum[edge][row * 4 + col];
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    Hbc[i][j] += HbcEdge[edge][i][j] * data.Alfa * detJBc[edge];
                 }
             }
         }
@@ -282,27 +255,15 @@ void Element::calculateHbc() {
 }
 
 void Element::calculateP() {
-    Matrix help(NPCBC * 4, Vector(4, 0.0));
-
-    for (int i = 0; i < NPCBC * 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            help[i][j] = elemUniv.dnBc[i][j] * data.Tot;
-        }
-    }
-
-    Matrix SumP(4, Vector(4, 0.0));
+    double SumP[4][4] = { 0 };
 
     for (int edge = 0; edge < 4; ++edge) {
-        for (int point = 0; point < NPCBC; ++point) {
-            int index = edge * NPCBC + point;
-            for (int i = 0; i < 4; ++i) {
-                SumP[edge][i] += help[index][i] * weightsbc[point];
+        for (int i = 0; i < NPCBC; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                SumP[edge][j] += elemUniv.NBc[edge * NPCBC + i][j] * weightsbc[i] * data.Tot;
             }
         }
     }
-
-    P.clear();
-    P.resize(4, 0.0);
 
     for (int edge = 0; edge < 4; ++edge) {
         if (nodes[nodeIds[edge] - 1].BC && nodes[nodeIds[(edge + 1) % 4] - 1].BC) {
@@ -314,7 +275,6 @@ void Element::calculateP() {
 }
 
 void Element::calculateC() {
-    C.resize(4, Vector(4, 0.0));
     for (int i = 0; i < NPC; i++) {
         for (int j = 0; j < NPC; j++) {
             for (int k = 0; k < 4; k++) {
@@ -346,7 +306,8 @@ void Solution::agregate() {
             globalJ = element.nodeIds[j] - 1;
             for (int k = 0; k < 4; ++k) {
                 globalK = element.nodeIds[k] - 1;
-                Hglobal[globalJ][globalK] += element.H[j][k] + element.Hbc[j][k];
+                Hglobal[globalJ][globalK] += element.H[j][k];
+                Hglobal[globalJ][globalK] += element.Hbc[j][k];
                 Cglobal[globalJ][globalK] += element.C[j][k];
             }
             Pglobal[globalJ] += element.P[j];
